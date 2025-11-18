@@ -106,6 +106,8 @@ return [
         'private-helper-text' => 'This will make the project private. Only the employees and administrators can see this project.',
         'collapsible'  => 'Collapsible',
         'collapsible-helper-text' => 'Enable collapsible dropdown for this project in the sidebar navigation.',
+        'anonymous-items' => 'Anonymous Items',
+        'anonymous-items-helper-text' => 'Hide user names and avatars for items and comments in this project. Administrators and project members can still see real user information.',
         'github-repo'  => 'Github Repository',
         'viewers'      => 'Viewers',
         'viewers-helper-text' => 'Allow certain users to view this project',

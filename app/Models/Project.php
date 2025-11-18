@@ -24,12 +24,14 @@ class Project extends Model
         'repo',
         'private',
         'collapsible',
+        'anonymous_items',
         'sort_order',
     ];
 
     protected $casts = [
         'private' => 'boolean',
         'collapsible' => 'boolean',
+        'anonymous_items' => 'boolean',
     ];
 
     public function boards()
@@ -60,5 +62,28 @@ class Project extends Model
         }
 
         return $query->where('private', false);
+    }
+
+    public function shouldAnonymizeForUser(?User $user = null): bool
+    {
+        if (!$this->anonymous_items) {
+            return false;
+        }
+
+        $user = $user ?? auth()->user();
+
+        if (!$user) {
+            return true;
+        }
+
+        if ($user->hasAdminAccess()) {
+            return false;
+        }
+
+        if ($this->members()->where('user_id', $user->id)->exists()) {
+            return false;
+        }
+
+        return true;
     }
 }

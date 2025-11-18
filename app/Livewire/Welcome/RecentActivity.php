@@ -40,7 +40,46 @@ class RecentActivity extends Component implements HasTable, HasForms, HasActions
             ->columns([
                 TextColumn::make('causer.name')
                     ->label(trans('table.users'))
+                    ->formatStateUsing(function ($state, $record) {
+                        $subject = $record->subject;
+
+                        if (!$subject) {
+                            return $state;
+                        }
+
+                        $shouldAnonymize = false;
+
+                        if ($subject instanceof \App\Models\Item) {
+                            $shouldAnonymize = $subject->shouldShowAnonymous();
+                        } elseif ($subject instanceof \App\Models\Comment) {
+                            $shouldAnonymize = $subject->shouldShowAnonymous();
+                        }
+
+                        if ($shouldAnonymize) {
+                            return trans('general.anonymous-user');
+                        }
+
+                        return $state;
+                    })
                     ->url(function ($record) {
+                        $subject = $record->subject;
+
+                        if (!$subject) {
+                            return null;
+                        }
+
+                        $shouldAnonymize = false;
+
+                        if ($subject instanceof \App\Models\Item) {
+                            $shouldAnonymize = $subject->shouldShowAnonymous();
+                        } elseif ($subject instanceof \App\Models\Comment) {
+                            $shouldAnonymize = $subject->shouldShowAnonymous();
+                        }
+
+                        if ($shouldAnonymize) {
+                            return null;
+                        }
+
                         if ($causer = $record->causer) {
                             return route('profile', $causer);
                         }

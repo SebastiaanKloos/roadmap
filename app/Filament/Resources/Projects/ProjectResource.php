@@ -102,6 +102,11 @@ class ProjectResource extends Resource
                             ->helperText(trans('resources.project.collapsible-helper-text'))
                             ->default(false),
 
+                        Toggle::make('anonymous_items')
+                            ->label(trans('resources.project.anonymous-items'))
+                            ->helperText(trans('resources.project.anonymous-items-helper-text'))
+                            ->default(false),
+
                         Select::make('repo')
                             ->label(trans('resources.project.github-repo'))
                             ->visible($gitHubService->isEnabled())

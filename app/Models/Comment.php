@@ -64,4 +64,13 @@ class Comment extends Model
     {
         return $query->where('private', false);
     }
+
+    public function shouldShowAnonymous(?User $user = null): bool
+    {
+        if (!$this->item || !$this->item->project) {
+            return false;
+        }
+
+        return $this->item->project->shouldAnonymizeForUser($user);
+    }
 }

@@ -17,4 +17,5 @@ return [
     'save' => 'Opslaan',
 
     'public-user' => 'Publieke gebruiker',
+    'anonymous-user' => 'Anonieme Gebruiker',
 ];

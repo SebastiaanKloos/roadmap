@@ -165,4 +165,13 @@ class Item extends Model
     {
         return (bool) $this->private;
     }
+
+    public function shouldShowAnonymous(?User $user = null): bool
+    {
+        if (!$this->project) {
+            return false;
+        }
+
+        return $this->project->shouldAnonymizeForUser($user);
+    }
 }

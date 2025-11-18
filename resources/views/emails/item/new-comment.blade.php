@@ -4,7 +4,7 @@
 {{ trans('notifications.new-comment-body', ['title' => trim($comment->item->title)]) }}
 
 @component('mail::panel')
-**{{ trans('notifications.from') }}:** {{ $comment->user->name }} {{ trans('notifications.on') }} {{ $comment->created_at->isoFormat('L LTS') }}.
+**{{ trans('notifications.from') }}:** {{ $comment->shouldShowAnonymous($user) ? trans('general.anonymous-user') : $comment->user->name }} {{ trans('notifications.on') }} {{ $comment->created_at->isoFormat('L LTS') }}.
 
 **{{ trans('notifications.comment') }}:**
 {{ trim($comment->content) }}

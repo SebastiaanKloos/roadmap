@@ -30,4 +30,5 @@ return [
 
     'close' => 'Close',
     'save' => 'Save',
+    'anonymous-user' => 'Anonymous User',
 ];
