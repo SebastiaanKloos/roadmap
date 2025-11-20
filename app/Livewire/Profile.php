@@ -223,7 +223,10 @@ class Profile extends Component implements HasForms, HasTable, HasActions
         return Action::make('public')
             ->label(trans('profile.view-public-profile'))
             ->color(Color::Slate)
-            ->url(fn () => route('public-user', auth()->user()->username));
+            ->url(fn () => app(\App\Settings\GeneralSettings::class)->enable_profile
+                ? route('public-user', auth()->user()->username)
+                : null)
+            ->visible(fn () => app(\App\Settings\GeneralSettings::class)->enable_profile);
     }
 
     public function delete()
