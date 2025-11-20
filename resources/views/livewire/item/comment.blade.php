@@ -25,18 +25,26 @@
                     </div>
                 @else
                     <div class="relative shrink-0 w-10 h-10 rounded-full">
-                        <a href="{{ route('public-user', $comment->user->username) }}">
+                        @if(app(App\Settings\GeneralSettings::class)->enable_profile)
+                            <a href="{{ route('public-user', $comment->user->username) }}">
+                        @endif
                         <img class="absolute inset-0 object-cover rounded-full"
                              src="{{ $comment->user->getGravatar() }}"
                              alt="{{ $comment->user->name }}">
-                        </a>
+                        @if(app(App\Settings\GeneralSettings::class)->enable_profile)
+                            </a>
+                        @endif
                     </div>
 
                     <div class="overflow-hidden font-medium flex items-center space-x-2">
                         <p class="truncate">
-                            <a href="{{ route('public-user', $comment->user->username) }}" class="hover:underline ease-in-out">
+                            @if(app(App\Settings\GeneralSettings::class)->enable_profile)
+                                <a href="{{ route('public-user', $comment->user->username) }}" class="hover:underline ease-in-out">
+                                    {{ $comment->user->name }}
+                                </a>
+                            @else
                                 {{ $comment->user->name }}
-                            </a>
+                            @endif
                         </p>
                         @if($comment->user_id === $item->user_id)
                             <span

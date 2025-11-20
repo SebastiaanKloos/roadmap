@@ -29,20 +29,28 @@
                             </div>
                         @else
                             @if($user)
-                                <a href="{{ route('public-user', $user->username) }}">
+                                @if(app(App\Settings\GeneralSettings::class)->enable_profile)
+                                    <a href="{{ route('public-user', $user->username) }}">
+                                @endif
                                 <div class="relative shrink-0 w-10 h-10 rounded-full">
                                     <img class="absolute inset-0 object-cover rounded-full"
                                          src="{{ $user->getGravatar() }}"
                                          alt="{{ $user->name }}">
                                 </div>
-                                </a>
+                                @if(app(App\Settings\GeneralSettings::class)->enable_profile)
+                                    </a>
+                                @endif
                             @endif
 
                                 <div class="overflow-hidden font-medium">
                                     @if($user)
-                                        <a href="{{ route('public-user', $user->username) }}" class="hover:underline ease-in-out">
+                                        @if(app(App\Settings\GeneralSettings::class)->enable_profile)
+                                            <a href="{{ route('public-user', $user->username) }}" class="hover:underline ease-in-out">
+                                                <p>{{ $user->name ?? '-Unknown user-' }}</p>
+                                            </a>
+                                        @else
                                             <p>{{ $user->name ?? '-Unknown user-' }}</p>
-                                        </a>
+                                        @endif
                                     @else
                                         <p>-Unknown user-</p>
                                     @endif
@@ -185,9 +193,13 @@
                                          @if($item->shouldShowAnonymous())
                                             {{ trans('general.anonymous-user') }}
                                         @elseif($activity->causer)
-                                            <a href="{{ route('public-user', $activity->causer->username) }}" class="hover:underline ease-in-out">
+                                            @if(app(App\Settings\GeneralSettings::class)->enable_profile)
+                                                <a href="{{ route('public-user', $activity->causer->username) }}" class="hover:underline ease-in-out">
+                                                    {{ $activity->causer->name }}
+                                                </a>
+                                            @else
                                                 {{ $activity->causer->name }}
-                                            </a>
+                                            @endif
                                         @else
                                             {{ trans('item-activity.unknown-user') }}
                                         @endif
