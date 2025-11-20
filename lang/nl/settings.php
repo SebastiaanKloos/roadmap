@@ -30,6 +30,8 @@ return [
         'disable-file-upload-helper-text' => 'Dit zal het uploaden van bestanden uitschakelen.',
         'disable-user-registration' => 'Schakel gebruikers registratie uit',
         'disable-user-registration-helper-text' => 'Dit zal het registreren van nieuwe gebruikers uitschakelen.',
+        'enable-profile' => 'Schakel publieke profielen in',
+        'enable-profile-helper-text' => 'Dit zal publieke gebruikersprofielen inschakelen die gebruikersactiviteit en stemgeschiedenis tonen.',
         'show-github-link' => 'Toon Github link',
         'show-github-link-helper-text' => 'Dit zal een link tonen naar de Github issue bij het item.',
         'inbox-workflow' => 'Inbox workflow',

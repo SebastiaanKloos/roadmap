@@ -30,6 +30,8 @@ return [
         'disable-file-upload-helper-text'                  => 'This will disable the file upload functionality for users.',
         'disable-user-registration'                        => 'Disable user registration',
         'disable-user-registration-helper-text'            => 'This will disable the user registration functionality.',
+        'enable-profile'                                   => 'Enable public profiles',
+        'enable-profile-helper-text'                       => 'This will enable public user profile pages that show user activity and voting history.',
         'show-github-link'                                 => 'Show Github link',
         'show-github-link-helper-text'                     => 'This will show a link to the Github issue on the item page.',
         'inbox-workflow'                                   => 'Inbox workflow',
