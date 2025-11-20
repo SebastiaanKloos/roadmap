@@ -5,14 +5,17 @@ namespace App\Http\Controllers;
 use App\Models\Item;
 use App\Models\User;
 use App\Models\Comment;
+use App\Settings\GeneralSettings;
 use Illuminate\Support\Collection;
 
 class PublicUserController extends Controller
 {
     public const ACTIVITY_ITEM_COUNT = 20;
 
-    public function __invoke($userName)
+    public function __invoke($userName, GeneralSettings $settings)
     {
+        abort_if(!$settings->enable_profile, 404);
+
         $user = User::where('username', $userName)->firstOrFail();
 
         $activities = $this->getRecentActivities($user);
