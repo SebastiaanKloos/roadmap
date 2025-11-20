@@ -21,10 +21,20 @@ class Activity extends Component implements HasTable, HasForms, HasActions
 
     public function table(Table $table): Table
     {
+        $user = auth()->user();
+
         return $table
             ->query(
                 ActivityModel::query()
-                    ->with(['causer', 'subject.user', 'subject.comments'])
+                    ->with([
+                        'causer',
+                        'subject' => function ($morphTo) {
+                            $morphTo->morphWith([
+                                \App\Models\Item::class => ['user', 'comments', 'project.members'],
+                                \App\Models\Comment::class => ['item.project.members'],
+                            ]);
+                        },
+                    ])
                     ->where(function (Builder $query) {
                         $query->whereHasMorph('subject', ['App\Models\Item'], function (Builder $query) {
                             $query->where('private', false);
@@ -39,7 +49,42 @@ class Activity extends Component implements HasTable, HasForms, HasActions
             ->columns([
                 TextColumn::make('causer.name')
                     ->label(trans('table.users'))
+                    ->formatStateUsing(function ($state, $record) use ($user) {
+                        $subject = $record->subject;
+
+                        if (!$subject) {
+                            return $state;
+                        }
+
+                        // Cache the anonymization check on the record
+                        if (!isset($record->_shouldAnonymize)) {
+                            $shouldAnonymize = false;
+
+                            if ($subject instanceof \App\Models\Item) {
+                                $shouldAnonymize = $subject->shouldShowAnonymous($user);
+                            } elseif ($subject instanceof \App\Models\Comment) {
+                                $shouldAnonymize = $subject->shouldShowAnonymous($user);
+                            }
+
+                            $record->_shouldAnonymize = $shouldAnonymize;
+                        }
+
+                        if ($record->_shouldAnonymize) {
+                            return trans('general.anonymous-user');
+                        }
+
+                        return $state;
+                    })
                     ->url(function ($record) {
+                        // Reuse the cached value from formatStateUsing
+                        if (isset($record->_shouldAnonymize) && $record->_shouldAnonymize) {
+                            return null;
+                        }
+
+                        if (!app(\App\Settings\GeneralSettings::class)->enable_profile) {
+                            return null;
+                        }
+
                         if ($causer = $record->causer) {
                             return route('public-user', $causer->username);
                         }
@@ -96,10 +141,28 @@ class Activity extends Component implements HasTable, HasForms, HasActions
                     ->dateTime()
                     ->since(),
             ])
-            ->recordUrl(function ($record) {
+            ->recordUrl(function ($record) use ($user) {
                 $subject = $record->subject;
 
                 if (!$subject) {
+                    return null;
+                }
+
+                // Calculate anonymization if not cached yet
+                if (!isset($record->_shouldAnonymize)) {
+                    $shouldAnonymize = false;
+
+                    if ($subject instanceof \App\Models\Item) {
+                        $shouldAnonymize = $subject->shouldShowAnonymous($user);
+                    } elseif ($subject instanceof \App\Models\Comment) {
+                        $shouldAnonymize = $subject->shouldShowAnonymous($user);
+                    }
+
+                    $record->_shouldAnonymize = $shouldAnonymize;
+                }
+
+                // Don't link to items/comments if they should be anonymous
+                if ($record->_shouldAnonymize) {
                     return null;
                 }
 
