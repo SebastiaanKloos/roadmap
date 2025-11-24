@@ -17,20 +17,27 @@ class PublicUserController extends Controller
         abort_if(!$settings->enable_profile, 404);
 
         $user = User::where('username', $userName)->firstOrFail();
+        $currentUser = auth()->user();
 
-        $activities = $this->getRecentActivities($user);
+        $activities = $this->getRecentActivities($user, $currentUser);
 
+        // Count using database queries for performance
         $data = [
-            'items_created' => $user->items()->visibleForCurrentUser()->count(),
+            'items_created' => $user->items()
+                ->visibleForCurrentUser()
+                ->notAnonymousFor($currentUser)
+                ->count(),
             'comments_created' => $user->comments()
                 ->whereHas('item', fn ($q) => $q->visibleForCurrentUser())
+                ->notAnonymousFor($currentUser)
                 ->count(),
             'votes_created' => $user->votes()
-                ->whereHasMorph('model', [Item::class, Comment::class], function ($query, $type) {
+                ->whereHasMorph('model', [Item::class, Comment::class], function ($query, $type) use ($currentUser) {
                     if ($type === Item::class) {
-                        $query->visibleForCurrentUser();
+                        $query->visibleForCurrentUser()->notAnonymousFor($currentUser);
                     } elseif ($type === Comment::class) {
-                        $query->whereHas('item', fn ($q) => $q->visibleForCurrentUser());
+                        $query->whereHas('item', fn ($q) => $q->visibleForCurrentUser())
+                            ->notAnonymousFor($currentUser);
                     }
                 })
                 ->count(),
@@ -40,10 +47,11 @@ class PublicUserController extends Controller
         return view('public-user', ['user' => $user, 'data' => $data]);
     }
 
-    private function getRecentActivities(User $user): Collection
+    private function getRecentActivities(User $user, ?User $currentUser): Collection
     {
         $items = $user->items()
             ->visibleForCurrentUser()
+            ->notAnonymousFor($currentUser)
             ->with('project')
             ->latest()
             ->limit(self::ACTIVITY_ITEM_COUNT)
@@ -61,6 +69,7 @@ class PublicUserController extends Controller
 
         $comments = $user->comments()
             ->whereHas('item', fn ($query) => $query->visibleForCurrentUser())
+            ->notAnonymousFor($currentUser)
             ->with(['item' => fn ($q) => $q->with('project')])
             ->latest()
             ->limit(self::ACTIVITY_ITEM_COUNT)
@@ -78,11 +87,12 @@ class PublicUserController extends Controller
             ->filter(fn ($comment) => $comment['url'] !== null);
 
         $votes = $user->votes()
-            ->whereHasMorph('model', [Item::class, Comment::class], function ($query, $type) {
+            ->whereHasMorph('model', [Item::class, Comment::class], function ($query, $type) use ($currentUser) {
                 if ($type === Item::class) {
-                    $query->visibleForCurrentUser();
+                    $query->visibleForCurrentUser()->notAnonymousFor($currentUser);
                 } elseif ($type === Comment::class) {
-                    $query->whereHas('item', fn ($q) => $q->visibleForCurrentUser());
+                    $query->whereHas('item', fn ($q) => $q->visibleForCurrentUser())
+                        ->notAnonymousFor($currentUser);
                 }
             })
             ->with(['model' => function ($query) {

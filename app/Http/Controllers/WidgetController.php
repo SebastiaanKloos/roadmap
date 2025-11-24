@@ -250,6 +250,14 @@ class WidgetController extends Controller
             $subject = $activity->subject;
             $description = ucfirst($activity->description);
 
+            // Check if this activity should be anonymized
+            $shouldAnonymize = false;
+            if ($subject instanceof \App\Models\Item) {
+                $shouldAnonymize = $subject->shouldShowAnonymous();
+            } elseif ($subject instanceof \App\Models\Comment) {
+                $shouldAnonymize = $subject->shouldShowAnonymous();
+            }
+
             if ($subject instanceof \App\Models\Item) {
                 $title = str($subject->title)->limit(50);
                 $description = ucfirst("{$activity->description}: \"{$title}\"");
@@ -265,7 +273,7 @@ class WidgetController extends Controller
             }
 
             return [
-                'user' => $activity->causer?->name ?? 'Unknown',
+                'user' => $shouldAnonymize ? trans('general.anonymous-user') : ($activity->causer?->name ?? 'Unknown'),
                 'description' => $description,
                 'votes' => $subject instanceof \App\Models\Item ? ($subject->total_votes ?? 0) : null,
                 'comments' => $subject instanceof \App\Models\Item ? $subject->comments->count() : null,
