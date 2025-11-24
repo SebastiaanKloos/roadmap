@@ -44,13 +44,13 @@
             @if($this->recentVoters->count() > 0)
                 <div class="flex -space-x-2">
                     @foreach($this->recentVoters as $voter)
-                        @if(app(\App\Settings\GeneralSettings::class)->enable_profile)
+                        @if(app(\App\Settings\GeneralSettings::class)->enable_profile && $voter['username'])
                             <a href="{{ route('public-user', $voter['username']) }}">
                         @endif
                         <img src="{{ $voter['avatar'] }}"
                              class="inline object-cover w-8 h-8 border-2 border-white rounded-full dark:border-gray-800"
                              alt="{{ $voter['name'] }}" x-data x-tooltip.raw="{{ $voter['name'] }}">
-                        @if(app(\App\Settings\GeneralSettings::class)->enable_profile)
+                        @if(app(\App\Settings\GeneralSettings::class)->enable_profile && $voter['username'])
                             </a>
                         @endif
                         @if($loop->last && $this->model->votes->count() > $this->recentVotersToShow)
