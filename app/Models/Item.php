@@ -174,4 +174,21 @@ class Item extends Model
 
         return $this->project->shouldAnonymizeForUser($user);
     }
+
+    /**
+     * Scope to filter items that should NOT be shown as anonymous for the given user.
+     * Items without a project are always included.
+     */
+    public function scopeNotAnonymousFor(Builder $query, ?User $user = null): Builder
+    {
+        $user = $user ?? auth()->user();
+
+        return $query->where(function (Builder $q) use ($user) {
+            // Items without project are never anonymous
+            $q->whereNull('project_id');
+
+            // Items in non-anonymous projects
+            $q->orWhereHas('project', fn (Builder $projectQuery) => $projectQuery->notAnonymousFor($user));
+        });
+    }
 }

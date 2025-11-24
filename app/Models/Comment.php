@@ -73,4 +73,12 @@ class Comment extends Model
 
         return $this->item->project->shouldAnonymizeForUser($user);
     }
+
+    /**
+     * Scope to filter comments that should NOT be shown as anonymous for the given user.
+     */
+    public function scopeNotAnonymousFor($query, ?User $user = null): \Illuminate\Database\Eloquent\Builder
+    {
+        return $query->whereHas('item', fn ($itemQuery) => $itemQuery->notAnonymousFor($user));
+    }
 }
