@@ -41,9 +41,13 @@ class MentionNotification extends Notification implements ShouldQueue
 
     public function toMail(User $notifiable): MailMessage
     {
+        $userName = $this->comment->shouldShowAnonymous($notifiable)
+            ? trans('general.anonymous-user')
+            : $this->comment->user->name;
+
         return (new MailMessage)
             ->subject(trans('notifications.new-mention-subject', ['title' => $this->comment->item->title]))
-            ->line(trans('notifications.new-mention-body', ['title' => $this->comment->item->title, 'user' => $this->comment->user->name]))
+            ->line(trans('notifications.new-mention-body', ['title' => $this->comment->item->title, 'user' => $userName]))
             ->action(trans('notifications.view-item'), route('items.show', $this->comment->item) . '#comment-' . $this->comment->id)
             ->line(trans('notifications.unsubscribe-info'));
     }

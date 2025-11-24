@@ -71,12 +71,22 @@ trait HasUpvote
      */
     public function getRecentVoterDetails(int $count = 5): Collection|\Illuminate\Support\Collection
     {
+        $shouldAnonymize = method_exists($this, 'shouldShowAnonymous') && $this->shouldShowAnonymous();
+
         return $this->votes()
             ->with('user')
             ->orderBy('created_at', 'desc')
             ->take($count)
             ->get()
-            ->map(function ($vote) {
+            ->map(function ($vote) use ($shouldAnonymize) {
+                if ($shouldAnonymize) {
+                    return [
+                        'name' => trans('general.anonymous-user'),
+                        'username' => null,
+                        'avatar' => 'https://www.gravatar.com/avatar/?d=mp',
+                    ];
+                }
+
                 return [
                     'name' => $vote->user->name,
                     'username' => $vote->user->username,
