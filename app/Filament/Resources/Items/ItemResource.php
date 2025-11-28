@@ -2,39 +2,38 @@
 
 namespace App\Filament\Resources\Items;
 
-use Filament\Schemas\Schema;
-use Filament\Schemas\Components\Tabs;
-use Filament\Schemas\Components\Tabs\Tab;
-use Filament\Schemas\Components\Utilities\Get;
-use Filament\Schemas\Components\Utilities\Set;
-use Filament\Actions\Action;
-use Filament\Schemas\Components\Grid;
-use Throwable;
-use Filament\Schemas\Components\Section;
-use App\Filament\Resources\Items\Pages\ListItems;
-use App\Filament\Resources\Items\Pages\CreateItem;
-use App\Filament\Resources\Items\Pages\EditItem;
 use Exception;
-use Filament\Forms;
+use Throwable;
 use App\Models\Item;
 use App\Models\User;
-use Filament\Tables;
 use App\Enums\UserRole;
 use App\Models\Project;
 use Filament\Tables\Table;
+use Filament\Actions\Action;
+use Filament\Schemas\Schema;
 use App\Services\GitHubService;
+use App\Services\LinearService;
 use Filament\Resources\Resource;
+use App\Jobs\SyncItemToLinearJob;
 use Filament\Tables\Filters\Filter;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Toggle;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Tabs;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Tabs\Tab;
 use Illuminate\Database\Eloquent\Builder;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\MarkdownEditor;
-use App\Filament\Resources\ItemResource\Pages;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
+use App\Filament\Resources\Items\Pages\EditItem;
+use App\Filament\Resources\Items\Pages\ListItems;
+use App\Filament\Resources\Items\Pages\CreateItem;
 use App\Filament\Resources\Items\RelationManagers\VotesRelationManager;
 use App\Filament\Resources\Items\RelationManagers\CommentsRelationManager;
 use App\Filament\Resources\Items\RelationManagers\ActivitiesRelationManager;
@@ -74,6 +73,7 @@ class ItemResource extends Resource
     public static function form(Schema $schema): Schema
     {
         $gitHubService = (new GitHubService);
+        $linearService = (new LinearService);
 
         return $schema
             ->components(
@@ -240,6 +240,88 @@ class ItemResource extends Resource
                                                     ->openUrlInNewTab();
                                             }
                                         ),
+
+                                    // Linear Integration
+                                    TextInput::make('linear_id')
+                                        ->label('Linear Issue ID')
+                                        ->visible(fn ($record) => $linearService->isEnabled() && $record?->linear_id)
+                                        ->disabled()
+                                        ->dehydrated(false)
+                                        ->suffixAction(
+                                            function (Get $get, $record) {
+                                                if (blank($record?->linear_url)) {
+                                                    return null;
+                                                }
+
+                                                return Action::make('linear-view')
+                                                    ->label('View in Linear')
+                                                    ->icon('heroicon-m-arrow-top-right-on-square')
+                                                    ->url($record->linear_url)
+                                                    ->openUrlInNewTab();
+                                            }
+                                        )
+                                        ->hintAction(
+                                            function ($record) use ($linearService) {
+                                                if (! $linearService->isEnabled() || $record?->linear_id) {
+                                                    return null;
+                                                }
+
+                                                return Action::make('linear-sync')
+                                                    ->label('Sync to Linear')
+                                                    ->icon('heroicon-s-arrow-path')
+                                                    ->tooltip('Create Linear issue from this item')
+                                                    ->requiresConfirmation()
+                                                    ->modalHeading('Sync to Linear')
+                                                    ->modalDescription('This will create a new Linear issue from this roadmap item.')
+                                                    ->modalSubmitActionLabel('Sync Now')
+                                                    ->action(function ($record) {
+                                                        dispatch(new SyncItemToLinearJob($record));
+
+                                                        Notification::make()
+                                                            ->title('Linear Sync')
+                                                            ->body('Item is being synced to Linear. This may take a few moments.')
+                                                            ->success()
+                                                            ->send();
+                                                    });
+                                            }
+                                        ),
+
+                                    Placeholder::make('linear_status')
+                                        ->label('Linear Sync Status')
+                                        ->visible(fn ($record) => $linearService->isEnabled() && $record?->linearSyncMapping)
+                                        ->content(function ($record) {
+                                            $mapping = $record->linearSyncMapping;
+                                            if (! $mapping) {
+                                                return 'Not synced';
+                                            }
+
+                                            $statusColors = [
+                                                'synced' => 'success',
+                                                'pending' => 'warning',
+                                                'error' => 'danger',
+                                            ];
+
+                                            $badge = '<span class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ring-'
+                                                . ($statusColors[$mapping->sync_status] ?? 'gray')
+                                                . '-600/20 bg-'
+                                                . ($statusColors[$mapping->sync_status] ?? 'gray')
+                                                . '-50 text-'
+                                                . ($statusColors[$mapping->sync_status] ?? 'gray')
+                                                . '-700">'
+                                                . ucfirst($mapping->sync_status)
+                                                . '</span>';
+
+                                            $info = $badge;
+                                            if ($mapping->last_synced_at) {
+                                                $info .= ' | Last synced: ' . $mapping->last_synced_at->diffForHumans();
+                                            }
+                                            if ($mapping->linear_identifier) {
+                                                $info .= ' | ID: ' . $mapping->linear_identifier;
+                                            }
+
+                                            return new \Illuminate\Support\HtmlString($info);
+                                        }),
+
                                     MarkdownEditor::make('content')
                                         ->label(trans('resources.item.content'))
                                         ->columnSpan(2)
@@ -341,6 +423,8 @@ class ItemResource extends Resource
      */
     public static function table(Table $table): Table
     {
+        $linearService = (new LinearService);
+
         return $table
             ->columns(
                 [
@@ -413,6 +497,15 @@ class ItemResource extends Resource
                     ->sortable()
                     ->toggleable()
                     ->toggledHiddenByDefault(),
+
+                IconColumn::make('linear_id')
+                    ->label('Linear')
+                    ->boolean()
+                    ->visible(fn () => (new LinearService)->isEnabled())
+                    ->sortable()
+                    ->toggleable()
+                    ->toggledHiddenByDefault()
+                    ->tooltip(fn ($record) => $record->linear_id ? 'Synced to Linear' : 'Not synced'),
                 ]
             )
             ->filters(
@@ -529,6 +622,31 @@ class ItemResource extends Resource
                     )
 
                 ]
+            )
+            ->groupedBulkActions(
+                $linearService->isEnabled() ? [
+                    \Filament\Actions\BulkAction::make('sync_to_linear')
+                        ->label('Sync to Linear')
+                        ->icon('heroicon-o-arrow-path')
+                        ->requiresConfirmation()
+                        ->modalHeading('Sync selected items to Linear')
+                        ->modalDescription('This will sync the selected items to Linear. Items already synced will be updated.')
+                        ->modalSubmitActionLabel('Sync Now')
+                        ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
+                            $count = 0;
+                            foreach ($records as $record) {
+                                dispatch(new SyncItemToLinearJob($record));
+                                $count++;
+                            }
+
+                            Notification::make()
+                                ->title('Linear Sync')
+                                ->body("{$count} items are being synced to Linear.")
+                                ->success()
+                                ->send();
+                        })
+                        ->deselectRecordsAfterCompletion(),
+                ] : []
             )
             ->defaultSort('created_at', 'desc');
     }

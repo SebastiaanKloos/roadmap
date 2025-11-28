@@ -19,6 +19,7 @@ class ListItems extends ListRecords
         ];
     }
 
+
     protected function getTableQuery(): Builder
     {
         return Item::query()
