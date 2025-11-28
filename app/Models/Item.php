@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Spatie\Activitylog\ActivitylogServiceProvider;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -34,7 +35,9 @@ class Item extends Model
         'project_id',
         'board_id',
         'user_id',
-        'issue_number'
+        'issue_number',
+        'linear_id',
+        'linear_url',
     ];
 
     protected $casts = [
@@ -120,6 +123,21 @@ class Item extends Model
         return $this
             ->morphToMany(self::getTagClassName(), 'taggable', 'taggables', null, 'tag_id')
             ->orderBy('order_column');
+    }
+
+    public function linearSyncMapping(): HasOne
+    {
+        return $this->hasOne(LinearSyncMapping::class);
+    }
+
+    public function linearSyncLogs(): HasMany
+    {
+        return $this->hasMany(LinearSyncLog::class);
+    }
+
+    public function isSyncedToLinear(): bool
+    {
+        return ! is_null($this->linear_id);
     }
 
     public function scopePopular($query)
