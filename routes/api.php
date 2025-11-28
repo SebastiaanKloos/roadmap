@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\WidgetController;
+use App\Http\Controllers\LinearWebhookController;
 
 /*
 |--------------------------------------------------------------------------
@@ -30,3 +31,6 @@ Route::prefix('activity-widget')->group(function () {
     Route::get('/config', [WidgetController::class, 'activityConfig']);
     Route::get('/activities', [WidgetController::class, 'activityList']);
 });
+
+// Linear webhook route (public)
+Route::post('/webhooks/linear', [LinearWebhookController::class, 'handle'])->name('webhooks.linear');
